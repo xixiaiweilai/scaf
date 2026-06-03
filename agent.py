@@ -2,8 +2,8 @@ import re
 
 import chex
 import elements
-import embodied.jax
-import embodied.jax.nets as nn
+import supple.jax
+import supple.jax.nets as nn
 import jax
 import jax.numpy as jnp
 import ninjax as nj
