@@ -10,7 +10,7 @@ sys.path.insert(1, str(folder.parent.parent))
 __package__ = folder.name
 
 import elements
-import embodied
+import supple
 import numpy as np
 import portal
 import ruamel.yaml as yaml
@@ -66,7 +66,7 @@ def main(argv=None):
   )
 
   if config.script == 'train':
-    embodied.run.train(
+    supple.run.train(
         bind(make_agent, config),
         bind(make_replay, config, 'replay'),
         bind(make_env, config),
@@ -75,7 +75,7 @@ def main(argv=None):
         args)
 
   elif config.script == 'train_eval':
-    embodied.run.train_eval(
+    supple.run.train_eval(
         bind(make_agent, config),
         bind(make_replay, config, 'replay'),
         bind(make_replay, config, 'eval_replay', 'eval'),
@@ -86,7 +86,7 @@ def main(argv=None):
         args)
 
   elif config.script == 'eval_only':
-    embodied.run.eval_only(
+    supple.run.eval_only(
         bind(make_agent, config),
         bind(make_env, config),
         bind(make_logger, config),
@@ -104,7 +104,7 @@ def make_agent(config):
   act_space = {k: v for k, v in env.act_space.items() if k != 'reset'}
   env.close()
   if config.random_agent:
-    return embodied.RandomAgent(obs_space, act_space)
+    return supple.RandomAgent(obs_space, act_space)
   cpdir = elements.Path(config.logdir)
   cpdir = cpdir.parent if config.replicas > 1 else cpdir
   return Agent(obs_space, act_space, elements.Config(
@@ -159,7 +159,7 @@ def make_replay(config, folder, mode='train'):
       chunksize=config.replay.chunksize, directory=directory)
 
   # QU-Selector (Quality-filtered Uniform Sampling) configuration
-  selectors = embodied.replay.selectors
+  selectors = supple.replay.selectors
   if config.replay.get('use_filter', False) and mode == 'train':
     # Quality-filtered uniform sampling based on dynamics error
     filter_percentile = config.replay.get('filter_percentile', 95)
@@ -178,14 +178,14 @@ def make_replay(config, folder, mode='train'):
         recency=selectors.Recency(recency),
     ), config.replay.fracs)
 
-  return embodied.replay.Replay(**kwargs)
+  return supple.replay.Replay(**kwargs)
 
 
 def make_env(config, index, **overrides):
   suite, task = config.task.split('_', 1)
   ctor = {
-      'dmc': 'embodied.envs.dmc:DMC',
-      'atari100k': 'embodied.envs.atari:Atari',
+      'dmc': 'supple.envs.dmc:DMC',
+      'atari100k': 'supple.envs.atari:Atari',
   }[suite]
   if isinstance(ctor, str):
     module, cls = ctor.split(':')
@@ -204,19 +204,19 @@ def make_env(config, index, **overrides):
 def wrap_env(env, config):
   for name, space in env.act_space.items():
     if not space.discrete:
-      env = embodied.wrappers.NormalizeAction(env, name)
-  env = embodied.wrappers.UnifyDtypes(env)
-  env = embodied.wrappers.CheckSpaces(env)
+      env = supple.wrappers.NormalizeAction(env, name)
+  env = supple.wrappers.UnifyDtypes(env)
+  env = supple.wrappers.CheckSpaces(env)
   for name, space in env.act_space.items():
     if not space.discrete:
-      env = embodied.wrappers.ClipAction(env, name)
+      env = supple.wrappers.ClipAction(env, name)
   return env
 
 
 def make_stream(config, replay, mode):
   fn = bind(replay.sample, config.batch_size, mode)
-  stream = embodied.streams.Stateless(fn)
-  stream = embodied.streams.Consec(
+  stream = supple.streams.Stateless(fn)
+  stream = supple.streams.Consec(
       stream,
       length=config.batch_length if mode == 'train' else config.report_length,
       consec=config.consec_train if mode == 'train' else config.consec_report,

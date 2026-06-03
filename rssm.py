@@ -169,8 +169,8 @@ class RSSM(nj.Module):
     return x.reshape(x.shape[:-1] + (self.stoch, self.classes))
 
   def _dist(self, logits):
-    out = embodied.jax.outs.OneHot(logits, self.unimix)
-    out = embodied.jax.outs.Agg(out, 1, jnp.sum)
+    out = supple.jax.outs.OneHot(logits, self.unimix)
+    out = supple.jax.outs.Agg(out, 1, jnp.sum)
     return out
 
 
@@ -321,7 +321,7 @@ class Decoder(nj.Module):
       x = self.sub('mlp', nn.MLP, self.layers, self.units, **kw)(inp)
       x = x.reshape((*bshape, *x.shape[1:]))
       kw = dict(**self.kw, outscale=self.outscale)
-      outs = self.sub('vec', embodied.jax.DictHead, spaces, outputs, **kw)(x)
+      outs = self.sub('vec', supple.jax.DictHead, spaces, outputs, **kw)(x)
       recons.update(outs)
 
     if self.imgkeys:
@@ -370,8 +370,8 @@ class Decoder(nj.Module):
       split = np.cumsum(
           [self.obs_space[k].shape[-1] for k in self.imgkeys][:-1])
       for k, out in zip(self.imgkeys, jnp.split(x, split, -1)):
-        out = embodied.jax.outs.MSE(out)
-        out = embodied.jax.outs.Agg(out, 3, jnp.sum)
+        out = supple.jax.outs.MSE(out)
+        out = supple.jax.outs.Agg(out, 3, jnp.sum)
         recons[k] = out
 
     entries = {}

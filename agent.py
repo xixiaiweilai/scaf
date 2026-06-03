@@ -2,6 +2,7 @@ import re
 
 import chex
 import elements
+import supple
 import supple.jax
 import supple.jax.nets as nn
 import jax
@@ -21,7 +22,7 @@ concat = lambda xs, a: jax.tree.map(lambda *x: jnp.concatenate(x, a), *xs)
 isimage = lambda s: s.dtype == np.uint8 and len(s.shape) == 3
 
 
-class Agent(embodied.jax.Agent):
+class Agent(supple.jax.Agent):
 
   banner = [
       "OK",
@@ -51,26 +52,26 @@ class Agent(embodied.jax.Agent):
 
     scalar = elements.Space(np.float32, ())
     binary = elements.Space(bool, (), 0, 2)
-    self.rew = embodied.jax.MLPHead(scalar, **config.rewhead, name='rew')
-    self.con = embodied.jax.MLPHead(binary, **config.conhead, name='con')
+    self.rew = supple.jax.MLPHead(scalar, **config.rewhead, name='rew')
+    self.con = supple.jax.MLPHead(binary, **config.conhead, name='con')
 
     d1, d2 = config.policy_dist_disc, config.policy_dist_cont
     outs = {k: d1 if v.discrete else d2 for k, v in act_space.items()}
-    self.pol = embodied.jax.MLPHead(
+    self.pol = supple.jax.MLPHead(
         act_space, outs, **config.policy, name='pol')
 
-    self.val = embodied.jax.MLPHead(scalar, **config.value, name='val')
-    self.slowval = embodied.jax.SlowModel(
-        embodied.jax.MLPHead(scalar, **config.value, name='slowval'),
+    self.val = supple.jax.MLPHead(scalar, **config.value, name='val')
+    self.slowval = supple.jax.SlowModel(
+        supple.jax.MLPHead(scalar, **config.value, name='slowval'),
         source=self.val, **config.slowvalue)
 
-    self.retnorm = embodied.jax.Normalize(**config.retnorm, name='retnorm')
-    self.valnorm = embodied.jax.Normalize(**config.valnorm, name='valnorm')
-    self.advnorm = embodied.jax.Normalize(**config.advnorm, name='advnorm')
+    self.retnorm = supple.jax.Normalize(**config.retnorm, name='retnorm')
+    self.valnorm = supple.jax.Normalize(**config.valnorm, name='valnorm')
+    self.advnorm = supple.jax.Normalize(**config.advnorm, name='advnorm')
 
     self.modules = [
         self.dyn, self.enc, self.dec, self.rew, self.con, self.pol, self.val]
-    self.opt = embodied.jax.Optimizer(
+    self.opt = supple.jax.Optimizer(
         self.modules, self._make_opt(**config.opt), summary_depth=1,
         name='opt')
 
@@ -363,9 +364,9 @@ class Agent(embodied.jax.Agent):
       anneal: int = 0,
   ):
     chain = []
-    chain.append(embodied.jax.opt.clip_by_agc(agc))
-    chain.append(embodied.jax.opt.scale_by_rms(beta2, eps))
-    chain.append(embodied.jax.opt.scale_by_momentum(beta1, nesterov))
+    chain.append(supple.jax.opt.clip_by_agc(agc))
+    chain.append(supple.jax.opt.scale_by_rms(beta2, eps))
+    chain.append(supple.jax.opt.scale_by_momentum(beta1, nesterov))
     if wd:
       assert not wdregex[0].isnumeric(), wdregex
       pattern = re.compile(wdregex)
@@ -407,7 +408,7 @@ def imag_loss(
 
   # Temporal smoothness constraint: compute smoothness reward and add to environment reward
   if smoothness_enable:
-    from embodied.jax.alignment import TemporalSmoothness
+    from supple.jax.alignment import TemporalSmoothness
     smooth_module = TemporalSmoothness()
     smooth_score = smooth_module(act)  # (B*K, H)
     
